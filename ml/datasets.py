@@ -1,6 +1,9 @@
+from PIL import Image
 from torch.utils.data import Dataset
 import random
 import numpy as np
+import glob
+import os
 
 
 class SocoFingerDataset(Dataset):
@@ -41,72 +44,51 @@ class SocoFingerDataset(Dataset):
     def __len__(self):
         return len(self.x)
 
+
 class MyFingerDataset(Dataset):
     """
     Train: For each sample creates randomly a positive or a negative pair
     Test: Creates fixed pairs for testing
     """
 
-    def __init__(self, train = True):
-        self.mnist_dataset = mnist_dataset
-
+    def __init__(self, data_folder, transform=None, train=True):
+        self.data_folder = data_folder
         self.train = train
-        self.transform = self.mnist_dataset.transform
+        self.transform = transform
+        files = glob.glob(self.data_folder)
+        self.data = []
+        self.labels = []
+        for fp in files:
+            x = Image.fromarray(np.load(fp) * 255, mode='L').resize((90, 90))
+            label = os.path.basename(fp)
+            l = label.rindex("_")
+            label = label[:l]
+            self.data.append(x)
+            self.labels.append(label)
+        self.labels = np.array(self.labels)
 
-        if self.train:
-            self.train_labels = self.mnist_dataset.train_labels
-            self.train_data = self.mnist_dataset.train_data
-            self.labels_set = set(self.train_labels.numpy())
-            self.label_to_indices = {label: np.where(self.train_labels.numpy() == label)[0]
-                                     for label in self.labels_set}
-        else:
-            # generate fixed pairs for testing
-            self.test_labels = self.mnist_dataset.test_labels
-            self.test_data = self.mnist_dataset.test_data
-            self.labels_set = set(self.test_labels.numpy())
-            self.label_to_indices = {label: np.where(self.test_labels.numpy() == label)[0]
-                                     for label in self.labels_set}
-
-            random_state = np.random.RandomState(29)
-
-            positive_pairs = [[i,
-                               random_state.choice(self.label_to_indices[self.test_labels[i].item()]),
-                               1]
-                              for i in range(0, len(self.test_data), 2)]
-
-            negative_pairs = [[i,
-                               random_state.choice(self.label_to_indices[
-                                                       np.random.choice(
-                                                           list(self.labels_set - set([self.test_labels[i].item()]))
-                                                       )
-                                                   ]),
-                               0]
-                              for i in range(1, len(self.test_data), 2)]
-            self.test_pairs = positive_pairs + negative_pairs
+        self.labels_set = set(self.labels)
+        self.label_to_indices = {label: np.where(self.labels == label)[0]
+                                 for label in self.labels_set}
 
     def __getitem__(self, index):
-        if self.train:
-            target = np.random.randint(0, 2)
-            img1, label1 = self.train_data[index], self.train_labels[index].item()
-            if target == 1:
-                siamese_index = index
-                while siamese_index == index:
-                    siamese_index = np.random.choice(self.label_to_indices[label1])
-            else:
-                siamese_label = np.random.choice(list(self.labels_set - set([label1])))
-                siamese_index = np.random.choice(self.label_to_indices[siamese_label])
-            img2 = self.train_data[siamese_index]
+        target = np.random.randint(0, 2)
+        img1, label1 = self.data[index], self.labels[index]
+        if target == 1:
+            siamese_index = index
+            while siamese_index == index:
+                siamese_index = np.random.choice(self.label_to_indices[label1])
         else:
-            img1 = self.test_data[self.test_pairs[index][0]]
-            img2 = self.test_data[self.test_pairs[index][1]]
-            target = self.test_pairs[index][2]
+            siamese_label = np.random.choice(list(self.labels_set - {label1}))
+            siamese_index = np.random.choice(self.label_to_indices[siamese_label])
+        img2 = self.data[siamese_index]
 
-        img1 = Image.fromarray(img1.numpy(), mode='L')
-        img2 = Image.fromarray(img2.numpy(), mode='L')
+        # img1 = Image.fromarray(img1 * 255, mode='L')
+        # img2 = Image.fromarray(img2 * 255, mode='L')
         if self.transform is not None:
             img1 = self.transform(img1)
             img2 = self.transform(img2)
         return (img1, img2), target
 
     def __len__(self):
-        return len(self.mnist_dataset)
+        return len(self.labels)

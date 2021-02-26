@@ -1,5 +1,5 @@
 import numpy as np
-from ml.datasets import FigurePrintDataset
+from ml.datasets import SocoFingerDataset
 import torchvision.transforms as transforms
 from ml.models import EmbeddingNet, SiameseNet
 import torch
@@ -60,8 +60,8 @@ if __name__ == '__main__':
         key = ''.join(key).zfill(6)
         label_real_dict[key] = i
     
-    test_dataset = FigurePrintDataset(x_val, label_val, x_real, label_real_dict,
-                                      transform=transforms.ToTensor())
+    test_dataset = SocoFingerDataset(x_val, label_val, x_real, label_real_dict,
+                                     transform=transforms.ToTensor())
     test_dataloader = DataLoader(test_dataset, num_workers=1, batch_size=1, shuffle=True)
     embedding_net = EmbeddingNet()
     model = SiameseNet(embedding_net)

@@ -1,5 +1,8 @@
 import cv2
 import numpy as np
+from skimage.morphology import thin
+import glob
+import os
 
 
 # from scipy.io import savemat
@@ -49,7 +52,7 @@ def ridge_orient(im, gradient_sigma, block_sigma, orient_smooth_sigma):
     gxx = cv2.filter2D(gxx, -1, f)
     gxy = 2 * cv2.filter2D(gxy, -1, f)
     gyy = cv2.filter2D(gyy, -1, f)
-    denom = np.sqrt(gxy * gxy + (gxx - gyy) ** 2)
+    denom = np.sqrt(gxy * gxy + (gxx - gyy) ** 2) + 1e-6
     sin2theta = gxy / denom
     cos2theta = (gxx - gyy) / denom
 
@@ -57,7 +60,7 @@ def ridge_orient(im, gradient_sigma, block_sigma, orient_smooth_sigma):
     cos2theta = cv2.filter2D(cos2theta, -1, f)
     sin2theta = cv2.filter2D(sin2theta, -1, f)
 
-    return np.arctan2(sin2theta, cos2theta) / 2 + np.pi / 2  # orient along with the ridges
+    return np.nan_to_num(np.arctan2(sin2theta, cos2theta)) / 2 + np.pi / 2  # orient along with the ridges
 
 
 def cal_freq(im, orient, window_size, min_wave_len, max_wave_len):
@@ -153,8 +156,9 @@ def ridge_filter(im, orient, freq, kx, ky, med_freq):
     for r in range(rows):
         for c in range(cols):
             if freq[r, c] > 0 and (size + 1 < r < rows - size - 1) and (size + 1 < c < cols - size - 1):
+                o_id = orient_index[r, c]
                 new_im[r, c] = np.sum(
-                    im[r - size - 1:r + size, c - size - 1:c + size] * filters[orient_index[r, c]])
+                    im[r - size - 1:r + size, c - size - 1:c + size] * filters[o_id])
     return new_im
 
 
@@ -194,4 +198,21 @@ def process(im_path):
     filter_size = 1.9
     ridge_filter_im = ridge_filter(norm_im, orient_im, freq_im, kx=filter_size, ky=filter_size, med_freq=median_freq)
 
-    return np.uint8(ridge_filter_im > 0)
+    return np.uint8((1 - thin(ridge_filter_im > 0))), im
+
+
+def process_images(input_path="data/org_images/*.jpg", output_folder='data/process_images'):
+    files = glob.glob(input_path)
+    for fp in files:
+        print(fp)
+        im, _ = process(fp)
+        fn = os.path.basename(fp).split('.')[0]
+        op = os.path.join(output_folder, fn + ".npy")
+        with open(op, 'wb') as f:
+            np.save(f, im)
+        cv2.imwrite(os.path.join(output_folder, fn + ".jpg"), im * 255)
+
+
+if __name__ == '__main__':
+    # im = process(r"E:\Projects\FingerprintRecognition\Matlab\Images\12.jpg")
+    process_images()

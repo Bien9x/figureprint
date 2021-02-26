@@ -1,4 +1,4 @@
-from ml.datasets import FigurePrintDataset
+from ml.datasets import SocoFingerDataset
 import torchvision.transforms as transforms
 import numpy as np
 from ml.models import EmbeddingNet, SiameseNet
@@ -61,8 +61,8 @@ if __name__ == '__main__':
         key = ''.join(key).zfill(6)
         label_real_dict[key] = i
 
-    train_dataset = FigurePrintDataset(x_train, label_train, x_real, label_real_dict,
-                                       transform=transforms.Compose([
+    train_dataset = SocoFingerDataset(x_train, label_train, x_real, label_real_dict,
+                                      transform=transforms.Compose([
                                            transforms.ToPILImage(),
                                            transforms.RandomOrder([
                                                transforms.GaussianBlur(3,sigma=(0.1,0.5)),
@@ -75,8 +75,8 @@ if __name__ == '__main__':
                                            transforms.ToTensor()
                                        ]))
 
-    test_dataset = FigurePrintDataset(x_val, label_val, x_real, label_real_dict,
-                                      transform=transforms.ToTensor())
+    test_dataset = SocoFingerDataset(x_val, label_val, x_real, label_real_dict,
+                                     transform=transforms.ToTensor())
 
     cuda = torch.cuda.is_available()
     batch_size = 64

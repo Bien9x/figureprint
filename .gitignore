@@ -183,6 +183,7 @@ pip-selfcheck.json
 
 # Gradle
 .idea/**/gradle.xml
+/data/org_images
 .idea/**/libraries
 
 # Gradle and Maven with auto-import

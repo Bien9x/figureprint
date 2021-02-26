@@ -12,7 +12,7 @@ import torch.nn.functional as F
 from ml.imgaug import augmenters as iaa
 import torch.nn as nn
 from sklearn.metrics import roc_auc_score, accuracy_score
-from ml.datasets import FigurePrintDataset
+from ml.datasets import SocoFingerDataset
 
 
 EPOCHS = 15
@@ -82,14 +82,14 @@ if __name__ == '__main__':
         key = ''.join(key).zfill(6)
         label_real_dict[key] = i
 
-    train_dataset = FigurePrintDataset(x_train, label_train, x_real, label_real_dict,
-                                       transform=transforms.Compose([
+    train_dataset = SocoFingerDataset(x_train, label_train, x_real, label_real_dict,
+                                      transform=transforms.Compose([
                                            get_augmenters().augment_image,
                                            transforms.ToTensor()
                                        ]))
 
-    test_dataset = FigurePrintDataset(x_val, label_val, x_real, label_real_dict,
-                                      transform=transforms.ToTensor())
+    test_dataset = SocoFingerDataset(x_val, label_val, x_real, label_real_dict,
+                                     transform=transforms.ToTensor())
     # Viewing the sample of images and to check whether its loading properly
     # vis_dataloader = DataLoader(train_dataset,
     #                             shuffle=True,
